@@ -8,9 +8,6 @@ python -m venv .venv
 ```
 
 2. Activate virtual environment
-```
-source .venv/bin/activate
-```
 
 3. Install dependencies
 ```

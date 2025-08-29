@@ -1,45 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>FogGUI</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/app.js" defer></script>
 </head>
 <body>
-    <div>
-        <canvas id="chart1"></canvas>
+    <div class="top-bar">
+        <div class="proj-description">
+            <h1>FogGUI</h1>
+            <p>An application to assist UAV field work</p>
+        </div>
+        <div class="running-details">
+            <p>Uptime: <span id = "uptime"></span></p>
+            <p>Battery Life: <span id = "battlife"></span></p>
+        </div>
     </div>
-    <script>
-
-        const ctx = document.getElementById("chart1");
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'TestPlot',
-                    data: []
-                }]
-            },
-            options: {
-                animation: false
-            }
-        });
-
-        const evtSource = new EventSource("/stream")
-        evtSource.onmessage = (e) => {
-            const label = Date.now()
-            const newData = e.data
-
-            chart.data.labels.push(label);
-            chart.data.datasets[0].data.push(newData);
-
-            if (chart.data.labels.length > 30) {
-                chart.data.labels.shift();
-                chart.data.datasets[0].data.shift();
-            }
-            chart.update();
-
-        };
-
-    </script>
+    <div class="altitude-charts">
+        <canvas id="tempxalt"></canvas>
+        <canvas id="relhumxalt"></canvas>
+        <canvas id="pressxalt"></canvas>
+    </div>
 </body>
 </html>
