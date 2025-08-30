@@ -17,7 +17,8 @@ def stream():
         while True:
             data = ser.readline().decode("utf-8")
             if data[:6] != "905302": # could look into different way to check - sometimes imet provides incomplete data
-                yield f"data: {data}\n\n"
+                continue
+            yield f"data: {data}\n\n"
             time.sleep(1)
     return Response(eventStream(), mimetype="text/event-stream")
 
