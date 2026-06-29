@@ -2,7 +2,7 @@ import json
 from flask import Flask, Response, send_from_directory, jsonify, request
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, delete_flight
+from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight
 
 
 app = Flask(__name__)
@@ -47,8 +47,13 @@ def api_get_flights():
 
 @app.route("/api/flights/<int:flight_id>/readings")
 def api_get_readings(flight_id):
-    min_alt = request.args.get("min_alt")
-    max_alt = request.args.get("max_alt")
+    if get_flight(flight_id) is None:
+        return jsonify({"error": "flight not found"}), 404
+    try:
+        min_alt = float(request.args["min_alt"]) if "min_alt" in request.args else None
+        max_alt = float(request.args["max_alt"]) if "max_alt" in request.args else None
+    except ValueError:
+        return jsonify({"error": "min_alt and max_alt must be numbers"}), 400
     return jsonify(get_readings(flight_id, min_alt, max_alt))
 
 @app.route("/api/flights/compare")
@@ -71,4 +76,4 @@ def api_delete_flight(flight_id):
     return "", 204
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    app.run(host="0.0.0.0", port=5001)

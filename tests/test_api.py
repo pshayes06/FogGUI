@@ -9,16 +9,18 @@ def test_get_flights():
     assert isinstance(response.get_json(), list)
 
 def test_get_readings():
-
+    flight_id = start_flight()
     client = app.test_client()
-    response = client.get("/api/flights/1/readings")
+    response = client.get(f"/api/flights/{flight_id}/readings")
 
     assert response.status_code == 200
+    assert isinstance(response.get_json(), list)
 
 def test_compare_flights():
-
+    id1 = start_flight()
+    id2 = start_flight()
     client = app.test_client()
-    response = client.get("/api/flights/compare?ids=1,2")
+    response = client.get(f"/api/flights/compare?ids={id1},{id2}")
 
     assert response.status_code == 200
     assert isinstance(response.get_json(), dict)

@@ -3,42 +3,51 @@ from foggui.parser import Reading
 from typing import Optional
 import os
 
-conn = psycopg2.connect(database=os.environ.get("DB_NAME", "foggui"))
+url = os.environ.get("DATABASE_URL")
+if url:
+    conn = psycopg2.connect(url)
+else:
+    conn = psycopg2.connect(database=os.environ.get("DB_NAME", "foggui"))
 
 def start_flight() -> int:
-    with conn.cursor() as cur:
-        cur.execute("INSERT INTO flights DEFAULT VALUES RETURNING id")
-        flight_id = cur.fetchone()[0]
-    conn.commit()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO flights DEFAULT VALUES RETURNING id")
+            flight_id = cur.fetchone()[0]
     return flight_id
 
 def insert_reading(flight_id: int, reading: Reading) -> None:
-    with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO readings (flight_id, recorded_at, uptime_s, altitude_m, pressure_mb, temperature_c, humidity_pct, raw_line)" \
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", \
-            (flight_id, reading.recorded_at, reading.uptime_s, reading.altitude_m, reading.pressure_mb, reading.temp_pressure_c, reading.humidity_pct, reading.raw_line)
-        )
-    conn.commit()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO readings
+                       (flight_id, recorded_at, uptime_s, altitude_m,
+                        pressure_mb, temperature_c, humidity_pct, raw_line)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (flight_id, reading.recorded_at, reading.uptime_s, reading.altitude_m,
+                 reading.pressure_mb, reading.temp_pressure_c, reading.humidity_pct, reading.raw_line),
+            )
 
 def end_flight(flight_id: int) -> None:
-    with conn.cursor() as cur:
-        cur.execute("UPDATE flights SET ended_at = NOW() WHERE id = %s", (flight_id,))
-    conn.commit()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE flights SET ended_at = NOW() WHERE id = %s", (flight_id,))
 
 def get_flight(flight_id: int) -> Optional[dict]:
-    with conn.cursor() as cur:
-        cur.execute("SELECT id, started_at, ended_at, label FROM flights WHERE id = %s", (flight_id,))
-        flight = cur.fetchone()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, started_at, ended_at, label FROM flights WHERE id = %s", (flight_id,))
+            flight = cur.fetchone()
     if flight is None:
         return None
     return {"id":flight[0], "started_at": flight[1], "ended_at": flight[2], "label":flight[3]}
 
 def get_flights() -> list:
-    with conn.cursor() as cur:
-        cur.execute("SELECT id, started_at, ended_at, label FROM flights")
-        flights = cur.fetchall()
-    
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, started_at, ended_at, label FROM flights")
+            flights = cur.fetchall()
+
     result = []
     for row in flights:
         result.append({
@@ -50,21 +59,22 @@ def get_flights() -> list:
     
     return result
 
-def get_readings(flight_id: int, min_alt: Optional[str] = None, max_alt: Optional[str] = None) -> list:
+def get_readings(flight_id: int, min_alt: Optional[float] = None, max_alt: Optional[float] = None) -> list:
     query = "SELECT id, recorded_at, uptime_s, altitude_m, pressure_mb, temperature_c, humidity_pct FROM readings WHERE flight_id = %s"
     params = [flight_id]
     if min_alt is not None:
         query+=" AND altitude_m >= %s"
-        params.append(float(min_alt))
-    
+        params.append(min_alt)
+
     if max_alt is not None:
         query+=" AND altitude_m <= %s"
-        params.append(float(max_alt))
+        params.append(max_alt)
 
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        readings = cur.fetchall()
-    
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            readings = cur.fetchall()
+
     result = []
     for row in readings:
         result.append({
@@ -80,8 +90,9 @@ def get_readings(flight_id: int, min_alt: Optional[str] = None, max_alt: Optiona
     return result
 
 def delete_flight(flight_id: int) -> None:
-    with conn.cursor() as cur:
-        cur.execute("DELETE FROM flights WHERE id = %s", (flight_id,))
-    conn.commit()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM flights WHERE id = %s", (flight_id,))
 
         
+        # is allowing deletion good idea? what if just label as bad flight instead?

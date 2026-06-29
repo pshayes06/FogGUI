@@ -33,7 +33,7 @@ class SerialSource:
             with ser:
                 while True:
                     try:
-                        line = ser.readline().decode("utf-8")
+                        line = ser.readline().decode("utf-8", errors="ignore")
                         yield line
                     except serial.SerialException:
                         break
