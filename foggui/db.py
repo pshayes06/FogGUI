@@ -26,11 +26,12 @@ def end_flight(flight_id: int) -> None:
         cur.execute("UPDATE flights SET ended_at = NOW() WHERE id = %s", (flight_id,))
     conn.commit()
 
-def get_flight(flight_id: int) -> dict:
+def get_flight(flight_id: int) -> Optional[dict]:
     with conn.cursor() as cur:
         cur.execute("SELECT id, started_at, ended_at, label FROM flights WHERE id = %s", (flight_id,))
         flight = cur.fetchone()
-
+    if flight is None:
+        return None
     return {"id":flight[0], "started_at": flight[1], "ended_at": flight[2], "label":flight[3]}
 
 def get_flights() -> list:
@@ -77,4 +78,10 @@ def get_readings(flight_id: int, min_alt: Optional[str] = None, max_alt: Optiona
         })
     
     return result
+
+def delete_flight(flight_id: int) -> None:
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM flights WHERE id = %s", (flight_id,))
+    conn.commit()
+
         

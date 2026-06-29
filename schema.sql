@@ -7,7 +7,7 @@ CREATE TABLE flights (
 
 CREATE TABLE readings (
     id          SERIAL PRIMARY KEY,
-    flight_id   INTEGER NOT NULL REFERENCES flights(id),
+    flight_id   INTEGER NOT NULL REFERENCES flights(id) ON DELETE CASCADE,
     recorded_at TIMESTAMP,
     uptime_s    REAL,
     altitude_m  REAL,

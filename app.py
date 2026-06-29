@@ -2,7 +2,7 @@ import json
 from flask import Flask, Response, send_from_directory, jsonify, request
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings
+from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, delete_flight
 
 
 app = Flask(__name__)
@@ -51,7 +51,7 @@ def api_get_readings(flight_id):
     max_alt = request.args.get("max_alt")
     return jsonify(get_readings(flight_id, min_alt, max_alt))
 
-@app.route("/api/flights/compare") # ?ids=1,2,3 is formatting
+@app.route("/api/flights/compare")
 def api_compare_flights():
     ids = request.args.get("ids")
 
@@ -65,6 +65,10 @@ def api_compare_flights():
 
     return jsonify(readings)
 
+@app.route("/api/flights/<int:flight_id>", methods=["DELETE"])
+def api_delete_flight(flight_id):
+    delete_flight(flight_id)
+    return "", 204
 
 if __name__ == '__main__':
     app.run(port=5001)
