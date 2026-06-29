@@ -4,13 +4,16 @@ from serial.tools.list_ports import comports
 BAUDRATE = 115200
 
 class ReplaySource:
-    def __init__(self, path: str):
+    def __init__(self, path: str, realtime: bool = False):
         self.path = path
+        self.realtime = realtime
 
     def lines(self):
         with open(self.path) as f:
             for line in f:
                 yield line
+                if self.realtime:
+                    time.sleep(0.5) # simulation purposes
 
 class SerialSource:
     def lines(self):

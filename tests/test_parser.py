@@ -1,4 +1,5 @@
 from foggui.parser import parse_packet
+from datetime import datetime
 
 def test_packets():
     result = parse_packet("905302,7/4/25,20:11:1,235.06,53,1000.44,34.20,22.40,35.30,7,36.9898683,-122.0525483,1.14,171.7,0.036,9999,25.36,32.86,26.25,32.28,83271,28.60,83307,27.88")
@@ -6,6 +7,7 @@ def test_packets():
     assert result.pressure_mb == 1000.44
     assert result.humidity_pct == 22.40
     assert result.uptime_s == 235.06
+    assert result.recorded_at == datetime(2025, 7, 4, 20, 11, 1)
     assert result.raw_line == "905302,7/4/25,20:11:1,235.06,53,1000.44,34.20,22.40,35.30,7,36.9898683,-122.0525483,1.14,171.7,0.036,9999,25.36,32.86,26.25,32.28,83271,28.60,83307,27.88"
 
 def test_rejects_short_packet():

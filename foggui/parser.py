@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 SERIAL = "905302"
@@ -10,6 +11,7 @@ class Reading:
     humidity_pct: float
     temp_pressure_c: float
     temp_humidity_c: float
+    recorded_at: datetime
     uptime_s: float
     raw_line: str
 
@@ -22,6 +24,7 @@ def parse_packet(line: str) -> Optional[Reading]:
         return None
     
     try:
+        recorded_at = datetime.strptime(f"{fields[1]} {fields[2]}", "%m/%d/%y %H:%M:%S")
         uptime_s = float(fields[3])
         pressure_mb = float(fields[5])
         temp_pressure = float(fields[6])
@@ -37,6 +40,7 @@ def parse_packet(line: str) -> Optional[Reading]:
         humidity_pct = humidity_pct,
         temp_pressure_c = temp_pressure,
         temp_humidity_c = temp_humidity,
+        recorded_at = recorded_at,
         uptime_s = uptime_s,
         raw_line = line,
     )
