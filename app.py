@@ -1,5 +1,5 @@
 import json
-from flask import Flask, Response, send_from_directory, jsonify
+from flask import Flask, Response, send_from_directory, jsonify, request
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
 from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings
@@ -13,7 +13,7 @@ def home():
 
 @app.route("/stream")
 def stream():
-    source = ReplaySource("nothing.txt", realtime=True) # temp hardcode
+    source = ReplaySource("nothing.txt", realtime=True) # temp hardcode, change to mockdata later too
     flight_id = start_flight()
     def eventStream():
         try:
@@ -47,7 +47,24 @@ def api_get_flights():
 
 @app.route("/api/flights/<int:flight_id>/readings")
 def api_get_readings(flight_id):
-    return jsonify(get_readings(flight_id))
+    min_alt = request.args.get("min_alt")
+    max_alt = request.args.get("max_alt")
+    return jsonify(get_readings(flight_id, min_alt, max_alt))
+
+@app.route("/api/flights/compare") # ?ids=1,2,3 is formatting
+def api_compare_flights():
+    ids = request.args.get("ids")
+
+    if ids is None:
+        return jsonify({"error": "ids paramater required"}), 400
+
+    ids = ids.split(",")
+    readings = {}
+    for flight_id in ids:
+        readings[int(flight_id)] = get_readings(flight_id)
+
+    return jsonify(readings)
+
 
 if __name__ == '__main__':
     app.run(port=5001)

@@ -1,5 +1,6 @@
 import psycopg2
 from foggui.parser import Reading
+from typing import Optional
 
 conn = psycopg2.connect(database="foggui")
 
@@ -40,10 +41,19 @@ def get_flights() -> list:
     
     return result
 
-def get_readings(flight_id: int) -> list:
+def get_readings(flight_id: int, min_alt: Optional[str] = None, max_alt: Optional[str] = None) -> list:
+    query = "SELECT id, recorded_at, uptime_s, altitude_m, pressure_mb, temperature_c, humidity_pct FROM readings WHERE flight_id = %s"
+    params = [flight_id]
+    if min_alt is not None:
+        query+=" AND altitude_m >= %s"
+        params.append(float(min_alt))
+    
+    if max_alt is not None:
+        query+=" AND altitude_m <= %s"
+        params.append(float(max_alt))
+
     with conn.cursor() as cur:
-        cur.execute("SELECT id, recorded_at, uptime_s, altitude_m, pressure_mb, temperature_c, humidity_pct FROM readings " \
-                    "WHERE flight_id = %s", (flight_id,))
+        cur.execute(query, params)
         readings = cur.fetchall()
     
     result = []
