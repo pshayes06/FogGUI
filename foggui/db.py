@@ -1,8 +1,9 @@
 import psycopg2
 from foggui.parser import Reading
 from typing import Optional
+import os
 
-conn = psycopg2.connect(database="foggui")
+conn = psycopg2.connect(database=os.environ.get("DB_NAME", "foggui"))
 
 def start_flight() -> int:
     with conn.cursor() as cur:
@@ -24,6 +25,13 @@ def end_flight(flight_id: int) -> None:
     with conn.cursor() as cur:
         cur.execute("UPDATE flights SET ended_at = NOW() WHERE id = %s", (flight_id,))
     conn.commit()
+
+def get_flight(flight_id: int) -> dict:
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, started_at, ended_at, label FROM flights WHERE id = %s", (flight_id,))
+        flight = cur.fetchone()
+
+    return {"id":flight[0], "started_at": flight[1], "ended_at": flight[2], "label":flight[3]}
 
 def get_flights() -> list:
     with conn.cursor() as cur:
