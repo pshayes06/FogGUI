@@ -3,41 +3,58 @@ from flask import Flask, Response, send_from_directory, jsonify, request
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
 from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight
-
+import threading
+import queue
 
 app = Flask(__name__)
+subscribers = []
+active_flight_id = None
+worker_thread = None
+stop_event = threading.Event()
 
+def ingest_worker(flight_id, source):
+    for line in source.lines():
+        if stop_event.is_set():
+            break
+        reading = parse_packet(line)
+        if reading is None:
+            continue
+
+        insert_reading(flight_id, reading)
+
+        for sub in subscribers:
+            sub.put(reading)
+        
+    end_flight(flight_id)
+    for sub in subscribers:
+        sub.put(None)
+            
 @app.route("/")
 def home():
     return send_from_directory('static', 'index.html')
 
 @app.route("/stream")
 def stream():
-    source = ReplaySource("nothing.txt", realtime=True) # temp hardcode, change to mockdata later too
-    flight_id = start_flight()
+    q = queue.Queue()
+    subscribers.append(q)
     def eventStream():
         try:
-            for line in source.lines():
-                reading = parse_packet(line)
+            while True:
+                reading = q.get()
                 if reading is None:
-                    continue
-
-                insert_reading(flight_id, reading)
-
+                    yield "data: done\n\n"
+                    break
                 data = json.dumps({
-                        "altitude_m": reading.altitude_m,
-                        "pressure_mb": reading.pressure_mb,
-                        "humidity_pct": reading.humidity_pct,
-                        "temp_pressure_c": reading.temp_pressure_c,
-                        "temp_humidity_c": reading.temp_humidity_c,
-                        "uptime_s": reading.uptime_s,
-                        })
-                
+                    "altitude_m": reading.altitude_m,
+                    "pressure_mb": reading.pressure_mb,
+                    "humidity_pct": reading.humidity_pct,
+                    "temp_pressure_c": reading.temp_pressure_c,
+                    "temp_humidity_c": reading.temp_humidity_c,
+                    "uptime_s": reading.uptime_s,
+                })
                 yield f"data: {data}\n\n"
-            yield "data: done\n\n"
-            end_flight(flight_id)
         except GeneratorExit:
-            end_flight(flight_id)
+            subscribers.remove(q)
 
     return Response(eventStream(), mimetype="text/event-stream")
 
@@ -73,6 +90,27 @@ def api_compare_flights():
 @app.route("/api/flights/<int:flight_id>", methods=["DELETE"])
 def api_delete_flight(flight_id):
     delete_flight(flight_id)
+    return "", 204
+
+@app.route("/api/flights/start", methods=["POST"])
+def api_start_flight():
+    global worker_thread, active_flight_id
+    if worker_thread is not None and worker_thread.is_alive():
+        return jsonify({"error": "recording already in progress"}), 400
+    flight_id = start_flight()
+    source = ReplaySource("mockdata.txt", realtime=True)
+
+    stop_event.clear()
+    t = threading.Thread(target=ingest_worker, args=(flight_id, source))
+    t.start()
+    active_flight_id = flight_id
+    worker_thread = t
+
+    return jsonify({"flight_id": flight_id}), 201
+
+@app.route("/api/flights/stop", methods=["POST"])
+def api_stop_flight():
+    stop_event.set()
     return "", 204
 
 if __name__ == '__main__':
