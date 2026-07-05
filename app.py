@@ -1,12 +1,14 @@
 import json
 import os
+import queue
+import threading
 from datetime import datetime
+
 from flask import Flask, Response, send_from_directory, jsonify, request, redirect
+
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
 from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label
-import threading
-import queue
 
 # "field" = laptop with a sensor (live capture, no DB, writes a log file)
 # "cloud" = server (upload/analysis only, no live capture)
@@ -16,7 +18,6 @@ FOGGUI_SOURCE = os.environ.get("FOGGUI_SOURCE", "replay")
 
 app = Flask(__name__)
 subscribers = []
-active_flight_id = None
 worker_thread = None
 stop_event = threading.Event()
 
@@ -31,7 +32,7 @@ def ingest_worker(flight_id, source, log_path):
             if reading is None:
                 continue
 
-            # flight_id is None in field mode — no DB, log file is the record
+            # flight_id is None in field mode: no DB, log file is the record
             if flight_id is not None:
                 insert_reading(flight_id, reading)
 
@@ -87,7 +88,7 @@ if FOGGUI_MODE == "field":
 
     @app.route("/api/flights/start", methods=["POST"])
     def api_start_flight():
-        global worker_thread, active_flight_id
+        global worker_thread
         if worker_thread is not None and worker_thread.is_alive():
             return jsonify({"error": "recording already in progress"}), 400
 
@@ -96,19 +97,15 @@ if FOGGUI_MODE == "field":
         else:
             source = ReplaySource("mockdata.txt", realtime=True)
 
-        # field mode: no DB, the log file is the record
-        flight_id = None
-
         os.makedirs("logs", exist_ok=True)
         log_path = os.path.join("logs", f"flight_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
 
         stop_event.clear()
-        t = threading.Thread(target=ingest_worker, args=(flight_id, source, log_path))
+        t = threading.Thread(target=ingest_worker, args=(None, source, log_path))
         t.start()
-        active_flight_id = flight_id
         worker_thread = t
 
-        return jsonify({"flight_id": flight_id}), 201
+        return jsonify({"flight_id": None}), 201
 
     @app.route("/api/flights/stop", methods=["POST"])
     def api_stop_flight():
@@ -154,6 +151,13 @@ else:
     def api_get_flights():
         return jsonify(get_flights())
 
+    @app.route("/api/flights/<int:flight_id>")
+    def api_get_flight(flight_id):
+        flight = get_flight(flight_id)
+        if flight is None:
+            return jsonify({"error": "flight not found"}), 404
+        return jsonify(flight)
+
     @app.route("/api/flights/<int:flight_id>/readings")
     def api_get_readings(flight_id):
         if get_flight(flight_id) is None:
@@ -168,15 +172,11 @@ else:
     @app.route("/api/flights/compare")
     def api_compare_flights():
         ids = request.args.get("ids")
-
         if ids is None:
-            return jsonify({"error": "ids paramater required"}), 400
-
-        ids = ids.split(",")
+            return jsonify({"error": "ids parameter required"}), 400
         readings = {}
-        for flight_id in ids:
+        for flight_id in ids.split(","):
             readings[int(flight_id)] = get_readings(flight_id)
-
         return jsonify(readings)
 
     @app.route("/api/flights/<int:flight_id>/label", methods=["PATCH"])

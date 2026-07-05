@@ -20,7 +20,7 @@ def parse_packet(line: str) -> Optional[Reading]:
     line = line.strip()
     fields = line.split(",")
 
-    if len(fields)!=24 or fields[0]!=SERIAL:
+    if len(fields) != 24 or fields[0] != SERIAL:
         return None
     
     try:

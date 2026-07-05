@@ -37,7 +37,7 @@ async function loadCharts() {
     const params = new URLSearchParams();
     if (minAlt) params.append("min_alt", minAlt);
     if (maxAlt) params.append("max_alt", maxAlt);
-    if ([...params].length) url += "?" + params.toString();
+    if (params.toString()) url += "?" + params.toString();
 
     const res = await fetch(url);
     allReadings = await res.json();
@@ -59,12 +59,9 @@ document.getElementById("scrubber").addEventListener("input", function() {
 });
 
 async function loadFlight() {
-    const res = await fetch("/api/flights");
-    const flights = await res.json();
-    const flight = flights.find(f => f.id === parseInt(flightId));
-    if (flight) {
-        document.getElementById("flightLabel").textContent = flight.label || "Flight";
-    }
+    const res = await fetch(`/api/flights/${flightId}`);
+    const flight = await res.json();
+    document.getElementById("flightLabel").textContent = flight.label || "Flight";
 }
 
 async function saveLabel() {

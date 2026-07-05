@@ -2,11 +2,6 @@ body {
     margin: 5vh 5vw;
 }
 
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-}
-
 .proj-description, .running-details {
     display: flex;
     flex-direction: column;
