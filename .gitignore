@@ -5,3 +5,4 @@ __pycache__/
 mockdata.txt
 learning.md
 architecture.md
+logs/
