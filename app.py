@@ -2,7 +2,7 @@ import json
 from flask import Flask, Response, send_from_directory, jsonify, request
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight
+from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label
 import threading
 import queue
 
@@ -33,6 +33,14 @@ def ingest_worker(flight_id, source):
 def home():
     return send_from_directory('static', 'index.html')
 
+@app.route("/flights")
+def flights():
+    return send_from_directory('static', 'flights.html')
+
+@app.route("/flights/<int:flight_id>")
+def flight_detail(flight_id):
+    return send_from_directory('static', 'flight.html')
+
 @app.route("/stream")
 def stream():
     q = queue.Queue()
@@ -57,6 +65,29 @@ def stream():
             subscribers.remove(q)
 
     return Response(eventStream(), mimetype="text/event-stream")
+
+@app.route("/api/flights/upload", methods=["POST"])
+def api_upload_flight():
+    if "file" not in request.files:
+        return jsonify({"error": "no file provided"}), 400
+
+    uploaded_file = request.files["file"]
+    readings = []
+    for line in uploaded_file.stream:
+        line = line.decode("utf-8", errors="ignore").strip()
+        reading = parse_packet(line)
+        if reading is not None:
+            readings.append(reading)
+
+    if not readings:
+        return jsonify({"error": "no valid readings in file"}), 400
+
+    flight_id = start_flight(request.form.get("label"), started_at=readings[0].recorded_at)
+    for reading in readings:
+        insert_reading(flight_id, reading)
+    end_flight(flight_id, ended_at=readings[-1].recorded_at)
+
+    return jsonify({"flight_id": flight_id}), 201
 
 @app.route("/api/flights")
 def api_get_flights():
@@ -86,6 +117,14 @@ def api_compare_flights():
         readings[int(flight_id)] = get_readings(flight_id)
 
     return jsonify(readings)
+
+@app.route("/api/flights/<int:flight_id>/label", methods=["PATCH"])
+def api_update_label(flight_id):
+    label = request.get_json().get("label")
+    if not label:
+        return jsonify({"error": "label required"}), 400
+    update_flight_label(flight_id, label)
+    return "", 204
 
 @app.route("/api/flights/<int:flight_id>", methods=["DELETE"])
 def api_delete_flight(flight_id):
