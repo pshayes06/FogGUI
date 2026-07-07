@@ -97,6 +97,12 @@ def update_flight_label(flight_id: int, label: str) -> None:
         with conn.cursor() as cur:
             cur.execute("UPDATE flights SET label = %s WHERE id = %s", (label, flight_id))
 
+def update_s3_key(flight_id: int, s3_key: str) -> None:
+    conn = get_conn()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE flights SET s3_key = %s WHERE id = %s", (s3_key, flight_id))
+
 def delete_flight(flight_id: int) -> None:
     conn = get_conn()
     with conn:

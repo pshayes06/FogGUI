@@ -8,13 +8,15 @@ from flask import Flask, Response, send_from_directory, jsonify, request, redire
 
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label
+import boto3
+from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label, update_s3_key
 
 # "field" = laptop with a sensor (live capture, no DB, writes a log file)
 # "cloud" = server (upload/analysis only, no live capture)
 FOGGUI_MODE = os.environ.get("FOGGUI_MODE", "cloud")
 # "serial" = real sensor; "replay" = replay mockdata.txt for demo/dev
 FOGGUI_SOURCE = os.environ.get("FOGGUI_SOURCE", "replay")
+S3_BUCKET = os.environ.get("S3_BUCKET")
 
 app = Flask(__name__)
 subscribers = []
@@ -129,10 +131,9 @@ else:
         if "file" not in request.files:
             return jsonify({"error": "no file provided"}), 400
 
-        uploaded_file = request.files["file"]
+        raw_bytes = request.files["file"].read()
         readings = []
-        for line in uploaded_file.stream:
-            line = line.decode("utf-8", errors="ignore").strip()
+        for line in raw_bytes.decode("utf-8", errors="ignore").splitlines():
             reading = parse_packet(line)
             if reading is not None:
                 readings.append(reading)
@@ -144,6 +145,11 @@ else:
         for reading in readings:
             insert_reading(flight_id, reading)
         end_flight(flight_id, ended_at=readings[-1].recorded_at)
+
+        s3_key = f"flights/{flight_id}/raw.txt"
+        s3 = boto3.client("s3", region_name="us-west-2")
+        s3.put_object(Bucket=S3_BUCKET, Key=s3_key, Body=raw_bytes)
+        update_s3_key(flight_id, s3_key)
 
         return jsonify({"flight_id": flight_id}), 201
 
