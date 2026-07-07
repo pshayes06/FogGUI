@@ -4,11 +4,11 @@ import queue
 import threading
 from datetime import datetime
 
+import boto3
 from flask import Flask, Response, send_from_directory, jsonify, request, redirect
 
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-import boto3
 from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label, update_s3_key
 
 # "field" = laptop with a sensor (live capture, no DB, writes a log file)
@@ -197,6 +197,6 @@ else:
     def api_delete_flight(flight_id):
         delete_flight(flight_id)
         return "", 204
-
+    
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
