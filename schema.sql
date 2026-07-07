@@ -2,7 +2,8 @@ CREATE TABLE flights (
     id          SERIAL PRIMARY KEY,
     started_at  TIMESTAMP NOT NULL DEFAULT NOW(),
     ended_at    TIMESTAMP,
-    label       TEXT
+    label       TEXT,
+    s3_key      TEXT
 );
 
 CREATE TABLE readings (
