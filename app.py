@@ -19,6 +19,7 @@ FOGGUI_SOURCE = os.environ.get("FOGGUI_SOURCE", "replay")
 S3_BUCKET = os.environ.get("S3_BUCKET")
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024 # 16MB payload limit
 subscribers = []
 worker_thread = None
 stop_event = threading.Event()
