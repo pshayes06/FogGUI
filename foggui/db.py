@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2.extras import execute_values
 import threading
 from foggui.parser import Reading
 from typing import Optional
@@ -38,6 +39,25 @@ def insert_reading(flight_id: int, reading: Reading) -> None:
                 (flight_id, reading.recorded_at, reading.uptime_s, reading.altitude_m,
                  reading.pressure_mb, reading.temp_pressure_c, reading.humidity_pct, reading.raw_line),
             )
+
+def insert_readings(flight_id: int, readings: list[Reading]) -> None:
+    conn = get_conn()
+    rows = [
+        (flight_id, r.recorded_at, r.uptime_s, r.altitude_m,
+         r.pressure_mb, r.temp_pressure_c, r.humidity_pct, r.raw_line)
+        for r in readings
+    ]
+    with conn:
+        with conn.cursor() as cur:
+            execute_values(
+                cur,
+                """INSERT INTO readings
+                       (flight_id, recorded_at, uptime_s, altitude_m,
+                        pressure_mb, temperature_c, humidity_pct, raw_line)
+                   VALUES %s""",
+                rows,
+            )
+            
 
 def end_flight(flight_id: int, ended_at=None) -> None:
     conn = get_conn()

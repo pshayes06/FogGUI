@@ -9,7 +9,7 @@ from flask import Flask, Response, send_from_directory, jsonify, request, redire
 
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
-from foggui.db import start_flight, insert_reading, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label, update_s3_key
+from foggui.db import start_flight, insert_reading, insert_readings, end_flight, get_flights, get_readings, get_flight, delete_flight, update_flight_label, update_s3_key
 
 # "field" = laptop with a sensor (live capture, no DB, writes a log file)
 # "cloud" = server (upload/analysis only, no live capture)
@@ -142,8 +142,7 @@ else:
             return jsonify({"error": "no valid readings in file"}), 400
 
         flight_id = start_flight(request.form.get("label"), started_at=readings[0].recorded_at)
-        for reading in readings:
-            insert_reading(flight_id, reading)
+        insert_readings(flight_id, readings)
         end_flight(flight_id, ended_at=readings[-1].recorded_at)
 
         s3_key = f"flights/{flight_id}/raw.txt"
