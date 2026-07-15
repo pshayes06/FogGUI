@@ -195,7 +195,10 @@ else:
 
     @app.route("/api/flights/<int:flight_id>", methods=["DELETE"])
     def api_delete_flight(flight_id):
-        delete_flight(flight_id)
+        s3_key = delete_flight(flight_id)
+        if s3_key:
+            s3 = boto3.client("s3", region_name="us-west-2")
+            s3.delete_object(Bucket=S3_BUCKET, Key=s3_key)
         return "", 204
     
 if __name__ == '__main__':

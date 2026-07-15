@@ -123,8 +123,10 @@ def update_s3_key(flight_id: int, s3_key: str) -> None:
         with conn.cursor() as cur:
             cur.execute("UPDATE flights SET s3_key = %s WHERE id = %s", (s3_key, flight_id))
 
-def delete_flight(flight_id: int) -> None:
+def delete_flight(flight_id: int) -> Optional[str]:
     conn = get_conn()
     with conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM flights WHERE id = %s", (flight_id,))
+            cur.execute("DELETE FROM flights WHERE id = %s RETURNING s3_key", (flight_id,))
+            row = cur.fetchone()
+    return row[0] if row else None
