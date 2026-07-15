@@ -17,6 +17,8 @@ FOGGUI_MODE = os.environ.get("FOGGUI_MODE", "cloud")
 # "serial" = real sensor; "replay" = replay mockdata.txt for demo/dev
 FOGGUI_SOURCE = os.environ.get("FOGGUI_SOURCE", "replay")
 S3_BUCKET = os.environ.get("S3_BUCKET")
+# read-only locks the deployed demo: writes are rejected and the write UI shows a notice
+FOGGUI_READONLY = os.environ.get("FOGGUI_READONLY", "false") == "true"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024 # 16MB payload limit
@@ -51,7 +53,7 @@ def ingest_worker(flight_id, source, log_path):
 
 @app.route("/api/config")
 def api_config():
-    return jsonify({"mode": FOGGUI_MODE})
+    return jsonify({"mode": FOGGUI_MODE, "readonly": FOGGUI_READONLY})
 
 @app.route("/")
 def home():
@@ -129,6 +131,8 @@ else:
 
     @app.route("/api/flights/upload", methods=["POST"])
     def api_upload_flight():
+        if FOGGUI_READONLY:
+            return jsonify({"error": "read-only mode"}), 403
         if "file" not in request.files:
             return jsonify({"error": "no file provided"}), 400
 
@@ -187,6 +191,8 @@ else:
 
     @app.route("/api/flights/<int:flight_id>/label", methods=["PATCH"])
     def api_update_label(flight_id):
+        if FOGGUI_READONLY:
+            return jsonify({"error": "read-only mode"}), 403
         label = request.get_json().get("label")
         if not label:
             return jsonify({"error": "label required"}), 400
@@ -195,6 +201,8 @@ else:
 
     @app.route("/api/flights/<int:flight_id>", methods=["DELETE"])
     def api_delete_flight(flight_id):
+        if FOGGUI_READONLY:
+            return jsonify({"error": "read-only mode"}), 403
         s3_key = delete_flight(flight_id)
         if s3_key:
             s3 = boto3.client("s3", region_name="us-west-2")

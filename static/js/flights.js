@@ -1,3 +1,5 @@
+let readonly = false;
+
 document.getElementById("fileInput").addEventListener("change", function() {
     document.getElementById("fileName").textContent = this.files[0]?.name || "No file chosen";
 });
@@ -19,6 +21,7 @@ async function loadFlights() {
 }
 
 async function upload() {
+    if (readonly) return alert("This is a read-only demo. Uploads are disabled here.");
     const file = document.getElementById("fileInput").files[0];
     if (!file) return alert("Choose a file first");
 
@@ -39,9 +42,11 @@ async function upload() {
 }
 
 async function deleteFlight(id) {
+    if (readonly) return alert("This is a read-only demo. Deletes are disabled here.");
     if (!confirm("Delete this flight?")) return;
     await fetch(`/api/flights/${id}`, { method: "DELETE" });
     loadFlights();
 }
 
+fetch("/api/config").then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
 loadFlights();

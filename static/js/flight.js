@@ -1,5 +1,6 @@
 const flightId = window.location.pathname.split("/").pop();
 let allReadings = [];
+let readonly = false;
 
 function createChart(ctxId, label) {
     return new Chart(document.getElementById(ctxId), {
@@ -65,6 +66,7 @@ async function loadFlight() {
 }
 
 async function saveLabel() {
+    if (readonly) return alert("This is a read-only demo. Renaming is disabled here.");
     const label = document.getElementById("editLabel").value.trim();
     if (!label) return;
     await fetch(`/api/flights/${flightId}/label`, {
@@ -76,5 +78,6 @@ async function saveLabel() {
     document.getElementById("editLabel").value = "";
 }
 
+fetch("/api/config").then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
 loadFlight();
 loadCharts();
