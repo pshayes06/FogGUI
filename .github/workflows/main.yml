@@ -1,4 +1,4 @@
-name: CI/CD
+name: Deploy Lambda Function
 on:
   push:
     branches: [main]
@@ -8,15 +8,73 @@ permissions:
   contents: read
 
 jobs:
-  verify-aws:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: foggui_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/foggui_test
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f schema.sql
+
+      - name: Run Tests
+        run: pytest tests/ -v
+
+  deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
+
       - name: Configure AWS Credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
           aws-region: us-west-2
           role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
-      - name: Test AWS Credentials
-        run: aws sts get-caller-identity
+
+      - name: Log Into ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          docker build -f Dockerfile.lambda -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+            --image-uri "$IMAGE"
+          aws lambda wait function-updated \
+            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }}
+
+      - name: Smoke Test
+        run: curl -fsS --retry 3 --retry-all-errors "${{ vars.FUNCTION_URL }}/api/flights" -o /dev/null
