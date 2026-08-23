@@ -1,0 +1,22 @@
+name: CI/CD
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  verify-aws:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+      - name: Test AWS Credentials
+        run: aws sts get-caller-identity
