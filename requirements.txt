@@ -10,3 +10,4 @@ pytest==7.4.4
 psycopg2-binary==2.9.12
 boto3==1.38.42
 gunicorn==23.0.0
+Flask-Cors==5.0.0

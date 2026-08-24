@@ -6,6 +6,7 @@ from datetime import datetime
 
 import boto3
 from flask import Flask, Response, send_from_directory, jsonify, request, redirect
+from flask_cors import CORS
 
 from foggui.sources import ReplaySource, SerialSource
 from foggui.parser import parse_packet
@@ -21,6 +22,7 @@ S3_BUCKET = os.environ.get("S3_BUCKET")
 FOGGUI_READONLY = os.environ.get("FOGGUI_READONLY", "false") == "true"
 
 app = Flask(__name__)
+CORS(app, origins=["https://pshayes06.github.io"])
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024 # 16MB payload limit
 subscribers = []
 worker_thread = None
