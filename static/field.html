@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FogGUI</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/field.js" defer></script>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="proj-description">
+            <h1>FogGUI</h1>
+            <p>An application to assist UAV field work</p>
+        </div>
+        <div class="running-details" id="uptime-section" style="display:none">
+            <p>Uptime: <span id="uptime"></span></p>
+        </div>
+    </div>
+
+    <div id="controls" style="display:none">
+        <button id="startBtn" onclick="startFlight()">Start Flight</button>
+        <button id="stopBtn" onclick="stopFlight()">Stop Flight</button>
+    </div>
+
+    <div id="idle-state">No active flight</div>
+
+    <div class="altitude-charts">
+        <canvas id="tempxalt"></canvas>
+        <canvas id="relhumxalt"></canvas>
+        <canvas id="pressxalt"></canvas>
+    </div>
+</body>
+</html>

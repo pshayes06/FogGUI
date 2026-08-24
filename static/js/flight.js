@@ -1,4 +1,9 @@
-const flightId = window.location.pathname.split("/").pop();
+// Empty string -> relative URLs -> whatever origin served this page (local Flask).
+const API = ["localhost", "127.0.0.1"].includes(location.hostname)
+    ? ""
+    : "https://lvnu5mqk3376y2y5o5263nute40okkdj.lambda-url.us-west-2.on.aws";
+
+const flightId = new URLSearchParams(location.search).get("id");
 let allReadings = [];
 let readonly = false;
 
@@ -34,7 +39,7 @@ async function loadCharts() {
     const minAlt = document.getElementById("minAlt").value;
     const maxAlt = document.getElementById("maxAlt").value;
 
-    let url = `/api/flights/${flightId}/readings`;
+    let url = `${API}/api/flights/${flightId}/readings`;
     const params = new URLSearchParams();
     if (minAlt) params.append("min_alt", minAlt);
     if (maxAlt) params.append("max_alt", maxAlt);
@@ -60,7 +65,7 @@ document.getElementById("scrubber").addEventListener("input", function() {
 });
 
 async function loadFlight() {
-    const res = await fetch(`/api/flights/${flightId}`);
+    const res = await fetch(`${API}/api/flights/${flightId}`);
     const flight = await res.json();
     document.getElementById("flightLabel").textContent = flight.label || "Flight";
 }
@@ -69,7 +74,7 @@ async function saveLabel() {
     if (readonly) return alert("This is a read-only demo. Renaming is disabled here.");
     const label = document.getElementById("editLabel").value.trim();
     if (!label) return;
-    await fetch(`/api/flights/${flightId}/label`, {
+    await fetch(`${API}/api/flights/${flightId}/label`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label })
@@ -78,6 +83,6 @@ async function saveLabel() {
     document.getElementById("editLabel").value = "";
 }
 
-fetch("/api/config").then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
+fetch(`${API}/api/config`).then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
 loadFlight();
 loadCharts();

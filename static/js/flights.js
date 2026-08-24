@@ -1,3 +1,8 @@
+// Empty string -> relative URLs -> whatever origin served this page (local Flask).
+const API = ["localhost", "127.0.0.1"].includes(location.hostname)
+    ? ""
+    : "https://lvnu5mqk3376y2y5o5263nute40okkdj.lambda-url.us-west-2.on.aws";
+
 let readonly = false;
 
 document.getElementById("fileInput").addEventListener("change", function() {
@@ -5,7 +10,7 @@ document.getElementById("fileInput").addEventListener("change", function() {
 });
 
 async function loadFlights() {
-    const res = await fetch("/api/flights");
+    const res = await fetch(`${API}/api/flights`);
     const flights = await res.json();
     const tbody = document.getElementById("flightsList");
     tbody.innerHTML = "";
@@ -13,8 +18,8 @@ async function loadFlights() {
         const row = document.createElement("tr");
         const date = new Date(flight.started_at).toLocaleString();
         row.innerHTML = `
-            <td style="cursor:pointer" onclick="window.location.href='/flights/${flight.id}'">${flight.label || "Flight"}</td>
-            <td style="cursor:pointer" onclick="window.location.href='/flights/${flight.id}'">${date}</td>
+            <td style="cursor:pointer" onclick="window.location.href='flight.html?id=${flight.id}'">${flight.label || "Flight"}</td>
+            <td style="cursor:pointer" onclick="window.location.href='flight.html?id=${flight.id}'">${date}</td>
             <td><button onclick="deleteFlight(${flight.id})">Delete</button></td>`;
         tbody.appendChild(row);
     }
@@ -30,7 +35,7 @@ async function upload() {
     form.append("file", file);
     if (label) form.append("label", label);
 
-    const res = await fetch("/api/flights/upload", { method: "POST", body: form });
+    const res = await fetch(`${API}/api/flights/upload`, { method: "POST", body: form });
     if (res.ok) {
         document.getElementById("label").value = "";
         document.getElementById("fileName").textContent = "No file chosen";
@@ -44,9 +49,9 @@ async function upload() {
 async function deleteFlight(id) {
     if (readonly) return alert("This is a read-only demo. Deletes are disabled here.");
     if (!confirm("Delete this flight?")) return;
-    await fetch(`/api/flights/${id}`, { method: "DELETE" });
+    await fetch(`${API}/api/flights/${id}`, { method: "DELETE" });
     loadFlights();
 }
 
-fetch("/api/config").then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
+fetch(`${API}/api/config`).then(r => r.json()).then(cfg => { readonly = cfg.readonly; });
 loadFlights();

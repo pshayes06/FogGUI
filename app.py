@@ -49,8 +49,6 @@ def ingest_worker(flight_id, source, log_path):
     for sub in subscribers:
         sub.put(None)
 
-# ---- always available ----
-
 @app.route("/api/config")
 def api_config():
     return jsonify({"mode": FOGGUI_MODE, "readonly": FOGGUI_READONLY})
@@ -59,8 +57,8 @@ def api_config():
 def home():
     # field laptop lands on the live page; cloud lands on the analysis pages
     if FOGGUI_MODE == "field":
-        return send_from_directory('static', 'index.html')
-    return redirect("/flights")
+        return send_from_directory('static', 'field.html')
+    return jsonify({"service": "foggui-api"}), 200
 
 # ---- field mode: live capture ----
 
@@ -120,14 +118,6 @@ if FOGGUI_MODE == "field":
 # ---- cloud mode: analysis + upload ----
 
 else:
-
-    @app.route("/flights")
-    def flights():
-        return send_from_directory('static', 'flights.html')
-
-    @app.route("/flights/<int:flight_id>")
-    def flight_detail(flight_id):
-        return send_from_directory('static', 'flight.html')
 
     @app.route("/api/flights/upload", methods=["POST"])
     def api_upload_flight():
