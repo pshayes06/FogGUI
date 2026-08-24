@@ -3,11 +3,21 @@ name: Deploy Lambda Function
 on:
   push:
     branches: [main]
-
+    paths-ignore:
+      - 'static/**'
+      - '**.md'
+      - 'docs/**'
+  
+  workflow_dispatch:
+  
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: "lambda-deploy"
+  cancel-in-progress: false
+  
 jobs:
   test:
     runs-on: ubuntu-latest
